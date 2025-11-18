@@ -1,9 +1,10 @@
-use reqwest;
+use rustlib;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hello from the Rust CLI!");
-    println!("Built with reqwest library");
+    println!("Built with Bazel");
+    println!("{}", rustlib::get_greeting("Rust CLI"));
 
     // Simple example showing reqwest is available
     let url = "https://httpbin.org/get";

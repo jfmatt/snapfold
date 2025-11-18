@@ -1,0 +1,15 @@
+# This Cargo.toml exists solely to declare external dependencies for Bazel's crate_universe.
+# Internal crates (rustlib, rustcli) are managed via BUILD.bazel files.
+
+[package]
+name = "external-deps"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "dummy.rs"
+
+[dependencies]
+reqwest = { version = "0.12", features = ["blocking"] }
+tokio = { version = "1", features = ["full"] }

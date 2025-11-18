@@ -101,6 +101,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "external-deps"
+version = "0.0.0"
+dependencies = [
+ "reqwest",
+ "tokio",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -770,14 +778,6 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "rustcli"
-version = "0.1.0"
-dependencies = [
- "reqwest",
- "tokio",
 ]
 
 [[package]]

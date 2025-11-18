@@ -1,84 +1,134 @@
 # Snapfold - Multi-Language Bazel Project
 
-Multi-module Go workspace with Rust, built with Bazel and native tools.
+Demonstrates Go and Rust in a single Bazel monorepo using Bzlmod.
 
 ## Project Structure
 
 ```
 snapfold/
-├── lib/                # Shared Go library module
-├── gocli/cmd/cli/      # Go CLI application
-├── rust/               # Rust CLI application
-├── go.work             # Go workspace configuration
-├── MODULE.bazel        # Bazel module (Bzlmod)
-└── .bazelrc            # Bazel configuration
+├── lib/greeting/       # Go library package
+├── gocli/cmd/cli/      # Go CLI binary
+├── rustlib/            # Rust library (Bazel-native)
+├── rustcli/            # Rust CLI binary (Bazel-native)
+├── go.mod              # Go module for entire repo
+├── Cargo.toml          # External Rust dependencies
+├── MODULE.bazel        # Bazel module configuration
+└── .bazelrc            # Build configuration
+```
+
+## Build Playbooks
+
+### Go (Bazel)
+```bash
+bazel build //<path/to/package>:<target>
+bazel run //<path/to/package>:<target>
+bazel run //<path/to/package>:<target> -- <args>
+```
+
+### Go (Native)
+```bash
+go build -o <output> ./<path/to/package>
+./<output> <args>
+```
+
+### Rust (Bazel)
+```bash
+bazel build //<path/to/package>:<target>
+bazel run //<path/to/package>:<target>
+bazel test //<path/to/package>:<test_target>
 ```
 
 ## Dependency Management
 
-### Add Go Dependency
+### Go Dependencies
+
+**Repo-level operation:**
 ```bash
-cd any/go/module/directory
-go get github.com/example/package@v1.2.3
-bazel run @rules_go//go -- mod tidy
-popd
+# Add or update dependency
+bazel run @rules_go//go get <module>@<version>
+
+# Regenerate BUILD files for all Go packages
 bazel run //:gazelle
-bazel build :...
-# If warned about missing use_repo:
-bazel run @buildozer -- 'use_repo_add @gazelle//:extensions.bzl go_deps com_github_example_package' //MODULE.bazel:all
+
+# Verify builds
+bazel build //<path/to/package>:<target>
+
+# If warned about missing use_repo, add it:
+bazel run @buildozer -- 'use_repo_add @gazelle//:extensions.bzl go_deps <repo_name>' //MODULE.bazel:all
 ```
 
-### Update All Go Dependencies
+**Update all Go dependencies:**
 ```bash
-cd lib && go get -u ./... && cd ..
-cd gocli && go get -u ./... && cd ..
-cd lib && bazel run @rules_go//go -- mod tidy && cd ..
-cd gocli && bazel run @rules_go//go -- mod tidy && cd ..
+bazel run @rules_go//go get -u ./...
 bazel run //:gazelle
 ```
 
-### Add Rust Dependency
+### Rust Dependencies
+
+**For external crates (from crates.io):**
+
+#### Add a new external crate
 ```bash
-# Edit rust/Cargo.toml to add dependency
-cd rust && cargo generate-lockfile && cd ..
-mv rust/Cargo.lock .
+# 1. Edit Cargo.toml and add dependency under [dependencies]
+# 2. Regenerate lockfile
+cargo generate-lockfile
+
+# 3. Update Bazel's crate repository
 CARGO_BAZEL_REPIN=1 bazel sync --only=crates
-# Edit rust/BUILD.bazel to add to deps list
-bazel build //rust:rustcli
+
+# 4. Edit the BUILD.bazel file for your Rust target
+#    Add @crates//:<crate_name> to the deps list
+
+# 5. Verify build
+bazel build //<path/to/package>:<target>
 ```
 
-### Update All Rust Dependencies
+#### Update all external Rust dependencies
 ```bash
-cd rust && cargo update && cd ..
-mv rust/Cargo.lock .
+cargo update
 CARGO_BAZEL_REPIN=1 bazel sync --only=crates
 ```
 
-### Regenerate BUILD Files
+#### For internal Rust crates
+
+Per-module operation - just edit BUILD.bazel:
 ```bash
-bazel run //:gazelle
+# Add //<path/to/library>:<library_name> to deps in BUILD.bazel
+bazel build //<path/to/package>:<target>
 ```
 
-## SDK Selection
+## Toolchain Configuration
 
-### Use Local Go (Default)
-```bash
-bazel build --config=go_host //gocli/cmd/cli:cli
-```
+### Go SDK Selection
 
-### Use Downloaded Go 1.24.2
 ```bash
-bazel build --config=hermetic //gocli/cmd/cli:cli
+# Use host-local Go installation (default)
+bazel build --config=go_host //<path/to/package>:<target>
+
+# Use Bazel-downloaded Go
+bazel build --config=hermetic //<path/to/package>:<target>
 ```
 
 ## Maintenance
 
-### Clean Bazel Cache
 ```bash
+# Clean build cache
 bazel clean
-```
 
-### Clean Everything
-```bash
+# Clean everything including external dependencies
 bazel clean --expunge
 ```
+
+## Architecture
+
+**Go:**
+- Single module at repo root (go.mod)
+- Internal packages reference each other via import paths
+- BUILD files auto-generated via Gazelle
+- Compatible with both Bazel and native Go tooling
+
+**Rust:**
+- Bazel-native with manually written BUILD files
+- Internal crates reference each other via Bazel labels
+- External dependencies managed via root Cargo.toml + crate_universe
+- Hermetic builds with all dependencies fetched by Bazel

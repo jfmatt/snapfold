@@ -6,6 +6,7 @@ rust_binary(
     edition = "2021",
     visibility = ["//visibility:public"],
     deps = [
+        "//rustlib",
         "@crates//:reqwest",
         "@crates//:tokio",
     ],

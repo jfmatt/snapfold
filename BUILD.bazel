@@ -1,14 +1,5 @@
 load("@gazelle//:def.bzl", "gazelle")
 
-# Go workspace with multiple modules
+# Go configuration
+# gazelle:prefix github.com/jfmatt/snapfold
 gazelle(name = "gazelle")
-
-gazelle(
-    name = "gazelle-update-repos",
-    args = [
-        "-from_file=go.work",
-        "-to_macro=deps.bzl%go_dependencies",
-        "-prune",
-    ],
-    command = "update-repos",
-)

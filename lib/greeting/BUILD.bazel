@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "greeting",
@@ -6,4 +6,11 @@ go_library(
     importpath = "github.com/jfmatt/snapfold/lib/greeting",
     visibility = ["//visibility:public"],
     deps = ["@com_github_spf13_cobra//:cobra"],
+)
+
+go_test(
+    name = "greeting_test",
+    srcs = ["greeting_test.go"],
+    embed = [":greeting"],
+    deps = ["@com_github_jfmatt_gotest//:gotest"],
 )

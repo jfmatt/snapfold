@@ -146,12 +146,12 @@
     "@@rules_rust~//crate_universe:extension.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "JGdpzmSlQWVd3XkM6ImWeolenJUNgyT8R5bF6J/lw0Y=",
-        "usagesDigest": "A6Oif5k3VJ5CINxO3OqL6x1s4sK6JLD5UvSB/kkhrX0=",
+        "usagesDigest": "hLFlA/424KiGsxcUWyHZuBd0m45YzAGIiFxh0ezmy2A=",
         "recordedFileInputs": {
           "@@rules_rust~~rust_host_tools~rust_host_tools//bin/rustc": "241027b94ad67beb36d0356f7cc05180daaa9966b2958cfba1d4de089d2e521c",
-          "@@//Cargo.lock": "a3fa43ced0676cbf2e472717f75e2799961b968595b843f7c457e13a0a38d802",
-          "@@//MODULE.bazel": "6f57eace3efd9a207236d7e3ccafbf25a1cd48596fb0bb0c7aa7d355d34e9ae1",
-          "@@//rust/Cargo.toml": "a0a3c7c9764be7bc6277df3aaa6f15f46dbf48455e69c75b33a5e5cb3131337f",
+          "@@//Cargo.toml": "f6e5ed1202c3100b4b66dcb81f7ce000d41be64a21bbeea749433bba0eaab104",
+          "@@//Cargo.lock": "f50de3c9825867bfc3ae5f2dbace243bfddf3b529adb1c228f31d80daa74391d",
+          "@@//MODULE.bazel": "e5921a2fcfe8f24f5bba4c223421c7237d44ceef3198ff2e6c148973b6f987d0",
           "@@rules_rust~~rust_host_tools~rust_host_tools//bin/cargo": "35099f3b7b9497b3ae95aa00886ac6839343488e5cdb958e69c16c9b58c3afb2"
         },
         "recordedDirentsInputs": {},
