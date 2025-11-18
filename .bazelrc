@@ -1,0 +1,25 @@
+# Build configuration
+build --enable_platform_specific_config
+build --incompatible_enable_cc_toolchain_resolution
+
+# Use Bzlmod for dependency management
+common --enable_bzlmod
+
+# Enable build output for better debugging
+build --verbose_failures
+build --worker_verbose
+
+# Performance optimizations
+build --jobs=auto
+build --worker_max_instances=auto
+
+# Go SDK selection
+# Default: use host Go installation (change to "1.24.2" for downloaded SDK)
+build --@rules_go//go/toolchain:sdk_version=host
+
+# Alternative build configs for explicit SDK selection:
+# Use local Go: bazel build --config=go_host //...
+build:go_host --@rules_go//go/toolchain:sdk_version=host
+
+# Use downloaded Go: bazel build --config=hermetic //...
+build:hermetic --@rules_go//go/toolchain:sdk_version=1.24.2

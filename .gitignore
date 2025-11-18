@@ -1,0 +1,4 @@
+bazel-*
+*.swp
+.claude/
+CLAUDE.md
