@@ -1,0 +1,371 @@
+edition = "2024";
+
+package snapfold.gamedef;
+option go_package = "github.com/jfmatt/snapfold/gamedef";
+
+option features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_STRIP;
+
+import "google/protobuf/money.proto";
+
+// Phases define the sequence of actions that occur in a hand. Some are
+// "0-player" (carried out by the dealer); others require player actions
+// (usually in turns, starting from the button).
+message Phase {
+  // Deal cards to players.
+  message PlayerDeal {
+    // Number of cards to deal to each player
+    int32 cards = 1;
+
+    // Wither the cards are dealt face up (exposed to the table). For instance,
+    // in stud poker, the initial two cards are face down, while cards 3-6 are
+    // face up.
+    //
+    // To represent a mix of face up and face down cards (e.g., in 7-Card
+    // Stud), configure multiple consecutive PlayerDeal phases with different
+    // face_up settings.
+    bool face_up = 2;
+  }
+
+  // Deal cards to one community board.
+  message CommunityDeal {
+    string name = 1;
+
+    // Number of cards to deal to the board  For instance, in Texas Hold'em,
+    // the flop is 3 cards, the turn is 1 card, and the river is 1 card.
+    int32 cards = 2;
+
+    // Which board to deal to. Only relevant in double-board or multi-community
+    // games, 
+    int32 board_idx = 3;
+  }
+
+  // A phase where players place bets, starting from the button.
+  //
+  // If this is the first betting round of the hand, then blinds and
+  // antes are posted at the beginning of this phase.
+  message BettingRound {
+    string name = 1;
+
+    enum BettingOrder {
+      BETTING_ORDER_UNKNOWN = 0;
+
+      // Blinds are posted, and the player left of the final
+      // blind/straddle acts first.
+      //
+      // Typically only be used for the first betting round of the
+      // hand.
+      BETTING_ORDER_FOLLOW_BLINDS = 1;
+
+      // The player left of the button acts first.
+      //
+      // Standard betting order for holdem and similar post-flop.
+      BETTING_ORDER_LEFT_OF_DEALER = 2;
+
+      // The player with the best face-up hand acts first.
+      //
+      // Standard for 7-card stud starting with the second betting round.
+      //
+      // Only valid if at least one face-up card has been dealt
+      // before this phase.
+      BETTING_ORDER_BEST_FACEUP = 3;
+    }
+    BettingOrder order = 3;
+  }
+
+  // Allow players to discard cards from their hand and draw replacements.
+  message Exchange {
+    // Max number of cards that can be exchanged by each player during this
+    // draw phase.
+    int32 max_exchange = 1;
+
+
+    // If set, players may not exchange face-up cards.
+    bool lock_faceup = 2;
+
+    // If set, players may not exchange face-down cards. Note that if the game
+    // does not have any face-up cards (like in Hold 'Em or typical 5-card
+    // draw), this effectively prevents any exchanges.
+    bool lock_facedown = 3;
+  }
+    oneof phase_type {
+        PlayerDeal     player_deal     = 1;
+        CommunityDeal  community_deal  = 2;
+        BettingRound   betting_round   = 3;
+        Exchange       exchange        = 4;
+    }
+}
+
+// 5-card poker hand types. In default play, these are ranked in the order
+// given, but in some variants (e.g., short-deck or lowball) the order may
+// differ.
+enum HandType {
+  HAND_TYPE_UNKNOWN = 0;
+  NO_PAIR = 1;
+  PAIR = 2;
+  TWO_PAIR = 3;
+  THREE_OF_A_KIND = 4;
+  STRAIGHT = 5;
+  FLUSH = 6;
+  FULL_HOUSE = 7;
+  FOUR_OF_A_KIND = 8;
+  STRAIGHT_FLUSH = 9;
+  FIVE_OF_A_KIND = 10;
+  FLUSH_HOUSE = 11;
+  FLUSH_FIVE = 12;
+}
+
+// Defines how a pot is awarded at the end of a hand.
+//
+// Players will always use exactly five cards to form their best hand, but the
+// number of cards that must come from their hand (as opposed to the community
+// board) may vary depending on the game variant (e.g. for Omaga), and the 
+// ranking of hand types may also vary (e.g. for short-deck).
+message Scoring {
+  // Used to disambiguate if there are multiple scoring
+  // rules (e.g. for Omaha Hi/Lo). Not relevant in more
+  // typical games with a single winner.
+  string name = 1;
+
+  oneof ranking {
+    // Use the standard poker hand rankings. Corresponds
+    // to listing all hands in the same order as the enum
+    // above.
+    bool standard_ranking = 2;
+
+    // Use A-5 ranking, typical for the Omaha low hand.
+    // Corresponds to listing all hands in the same order
+    // as the enum above, but skipping FLUSH, STRAIGHT,
+    // and STRAIGHT_FLUSH.
+    bool ace_five = 3;
+
+    // The order of hand types from weakest to strongest
+    // for this scoring rule.
+    repeated HandType hand_order = 4;
+  }
+
+  // Whether the top card plus bottom 4 cards is a valid
+  // straight (e.g. A2345). Defaults to true if the top
+  // rank is "A", false otherwise.
+  bool top_card_can_form_low_straight = 5;
+
+  // Whether the top 2 ranks plus bottom 3 ranks is a
+  // valid straight (e.g. KA234). Defaults to false.
+  bool wraparound_straight = 6;
+
+  // If set, the lowest hand wins instead of the highest.
+  //
+  // Note that this is different from simply reversing the hand_order, as in
+  // lowball games you also want lower pairs to beat higher pairs, etc.
+  bool lo = 7;
+
+  // If set, only hands that have no pair or higher (i.e. are only
+  // HIGH_CARD) are valid to play, and only if the highest card is
+  // at most this rank. For instance, the common A-5 8-or-better
+  // sets this to "8".
+  //
+  // If no players have a valid lo hand, then this scoring is
+  // SKIPPED as if it didn't exist, and the pot is distributed among
+  // the winners of other scorings. It is invalid for all scorings
+  // to have a qualifier.
+  //
+  // Only relevant if lo is true.
+  string lo_qualifier = 8;
+
+  // Whether the highest rank can count as the lowest rank
+  // in a high-card hand. Only relevant for lo scoring;
+  // this is the difference between ace-six and
+  // deuce-seven (Kansas City) scoring.
+  //
+  // Only relevant if lo is true.
+  //
+  // Defaults to true (A-5/A-6 rules).
+  bool top_card_can_be_low = 8;
+
+  // Represents an inclusive range of number of cards. If min == max == -1, then
+  // there is no restriction on the number of cards.
+  message Range {
+    int32 min = 1;
+    int32 max = 2;
+  }
+
+  // The number of cards that must be used from the player's hand when forming
+  // their best five-card hand.
+  //
+  // If unset, no restriction.
+  //
+  // Examples:
+  //   - Hold'em: {min: -1, max: -1}, or {min: 0, max: 2}, or no value
+  //   - Omaha: {min: 2, max: 2}
+  Range hand_cards = 8;
+
+  // Number of cards that players must use from each community board. Each
+  // element corresponds to a single community board, if there are multiple.
+  //
+  // Examples:
+  //   - Omaha: [{min: 3, max: 3}]
+  //   - Double-board Hold'em:
+  //      - Score 1: [{min: -1, max: -1}, {min: 0, max: 0}]
+  //      - Score 2: [{min: 0, max: 0}, {min: -1, max: -1}]
+  repeated Range community_cards = 9;
+}
+
+message Deck {
+  // The set of suits in the deck. Each suit should be a single "character",
+  // although the definition of such is a bit squirrelly with Unicode. Order
+  // does not matter.
+  //
+  // If not set, defaults to 4 suits: ["♠", "♥", "♦", "♣"]
+  //
+  // Duplicates are allowed - in which case, duplicate cards will exist in the
+  // deck. For instance, to represent a double deck of cards, set this field to
+  // ["♠", "♠", "♥", "♥", "♦", "♦", "♣", "♣"]
+  //
+  // Other common suit choices -
+  //   Tarot: "⛤" (pentacle), "⚔" (sword), "🪄" (wand), "🏆" (cup)
+  repeated string suits = 1;
+
+  // Ranks for each suit.
+  //
+  // If not set, defaults to 13 ranks: ["2", "3", "4", "5", "6", "7", "8",
+  // "9", "10", "J", "Q", "K", "A"]
+  repeated string ranks = 2;
+
+  // Number of wild-card jokers to add to the deck.
+  int32 jokers = 4;
+
+  message Wild {
+    string rank = 1;
+
+    // If non-empty, only these suits will be considered wild.
+    //
+    // Examples:
+    //  one-eyed-jacks: ["♠", "♥"]
+    //  suicide king:   ["♥"]
+    repeated string suits = 2;
+  }
+  repeated Wild wilds = 5;
+}
+
+message GameStructure {
+  string id = 1;
+  string name = 2;
+
+  // Deck used in the game. If not specified, a standard 52-card deck is used.
+  Deck deck = 3;
+
+  // Defines the dealing and betting phases of the game.
+  repeated Phase phases = 4;
+  int32 community_board_count = 5;
+
+  // Defines how a winner is determined if multiple players remain at showdown.
+  //
+  // If multiple scoring rules are provided, then players' hands are ranked
+  // independently for each one, and the pot is split among the winners of each
+  // score. Most standard casino games have only one scoring rule; multiple
+  // rules are used to represent Omaha Hi-Lo and double-board games.
+  repeated Scoring scorings = 6;
+}
+
+message Blinds {
+  // Blinds posted at the beginning of the first betting round, in order from
+  // smallest to largest.
+  //
+  // If this is a bomb pot, then the blinds will not be posted, but the largest
+  // blind amount will still be used to determine minimum bet sizes.
+  repeated google.protobuf.Money blind_levels = 1;
+
+  enum blind_order {
+    BLIND_ORDER_UNKNOWN = 0;
+
+    // First blind is paid by the left of the dealer, then left of
+    // them, and so on.
+    //
+    // Typical for hold-em-like games.
+    BLIND_ORDER_UTG = 1;
+
+    // First blind is paid by the player with the worst visible
+    // cards.
+    //
+    // Only valid if at least one face-up card is dealt before the
+    // first betting phase.
+    //
+    // Typical for 7-card-stud.
+    BLIND_ORDER_BRINGIN = 2;
+  }
+
+  // Ante amount posted by each player at the start of each hand.
+  google.protobuf.Money ante = 2;
+
+  // If set, this hand will work as a bomb pot. No blinds, antes, or straddles
+  // will be posted. Instead, when the first betting phase is reached, each
+  // player will post this amount, and then the phase will immediately end. In
+  // Hold'em, this means that the pot starts with each player contributing this
+  // amount, and betting begins after the flop.
+  google.protobuf.Money bomb_pot = 3;
+
+  // Each straddle is an additional blind posted optionally. The player who
+  // posts the straddle (or the last straddle, if multiple are allowed) acts
+  // last in the first betting round.
+  //
+  // The straddle bet amount is always twice the largest blind amount.
+  oneof straddle {
+    // Allow the under the gun (UTG) player to post a straddle.
+    //
+    // If greater than 1, allows subsequent straddles by consecutive players -
+    // e.g., setting to 2 allows UTG to straddle and then UTG+1 to
+    // re-straddle (for 2x the straddle amount) if they do.
+    int32 utg_straddle = 4;
+  
+    // If true, allows Mississippi straddles, where any player (not just the
+    // player under the gun) may post a straddle. Betting begins with the
+    // player left of the straddler. If multiple players attempt to straddle,
+    // the last straddler in order (i.e. the button, or closest to it going
+    // counter-clockwise) takes precedence.
+    bool mississippi_straddle = 5;
+  
+    // If true, allows button straddles, where the player on the button may
+    // post a straddle. Betting begins with the player left of the blinds as
+    // normal. When action reaches the button, it skips them and goes to the
+    // blinds, then returns to the button after the blinds have acted.
+    bool button_straddle = 6;
+  }
+}
+
+message Buyin {
+  // Minimum buy-in amount for the table.
+  google.protobuf.Money min = 1;
+
+  // Maximum buy-in amount for the table.
+  google.protobuf.Money max = 2;
+
+  // If true, players can buy in to match the largest stack at the table, even
+  // if it exceeds 'max'.
+  bool table_max = 3;
+}
+
+message TableConfig {
+  // Defines the game being played
+  oneof structure {
+    string standard_game_id = 1;
+    GameStructure custom = 2;
+  }
+
+  // Defines the stakes being played for
+  Blinds blinds = 4;
+  enum BettingStructure {
+    LIMIT_UNKNOWN = 0;
+
+    // No limit on bet sizes.
+    NO_LIMIT = 1;
+
+    // Fixed limit betting structure, where bets and raises are in fixed
+    // increments.
+    FIXED_LIMIT = 2;
+
+    // Pot limit betting structure, where bets and raises can be up to the
+    // size of the pot.
+    POT_LIMIT = 3;
+  }
+  BettingStructure structure = 5;
+  Buyin buyin = 6;
+}

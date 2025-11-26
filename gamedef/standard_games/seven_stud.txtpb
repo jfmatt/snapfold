@@ -1,0 +1,52 @@
+id: 5
+name: "Seven Card Stud"
+
+phases {
+  player_deal {
+  	cards: 2
+	face_up: false
+  }
+  player_deal {
+    cards: 1
+	face_up: true
+  }
+  betting_round {
+    order: BETTING_ORDER_FOLLOW_BLINDS
+  }
+  player_deal {
+    cards: 1
+	face_up: true
+  }
+  betting_round {
+    name: "Fourth card"
+    order: BETTING_ORDER_BEST_FACEUP
+  }
+  player_deal {
+    cards: 1
+	face_up: true
+  }
+  betting_round {
+    name: "Fifth card"
+	order: BETTING_ORDER_BEST_FACEUP
+  }
+  player_deal {
+    cards: 1
+	face_up: true
+  }
+  betting_round {
+    name: "Sixth card"
+	order: BETTING_ORDER_BEST_FACEUP
+  }
+  player_deal {
+    cards: 1
+	face_up: false
+  }
+  betting_round {
+    name: "Seventh card"
+	order: BETTING_ORDER_BEST_FACEUP
+  }
+}
+
+scorings {
+  standard_ranking: true
+}

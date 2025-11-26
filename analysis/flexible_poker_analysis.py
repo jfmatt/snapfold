@@ -11,6 +11,7 @@ Examples:
 
 import math
 from collections import defaultdict
+from functools import cache
 from typing import Tuple, List, Dict
 
 class DeckAnalyzer:
@@ -52,6 +53,7 @@ class DeckAnalyzer:
             return 0
         return math.factorial(n) // (math.factorial(k) * math.factorial(n - k))
 
+    @cache
     def generate_partitions(self, n: int, max_val: int = None, max_len: int = None) -> List[List[int]]:
         """Generate all integer partitions of n.
 
@@ -158,9 +160,8 @@ class DeckAnalyzer:
         # Sum ways for partitions with at least two different ranks having >= 2 cards
         count = 0
         for partition in partitions:
-            # Count number of different ranks that have pairs
-            num_ranks_with_pairs = sum(1 for val in partition if val >= 2)
-            if num_ranks_with_pairs >= 2:
+            has_two_pair = sum(1 for val in partition if val >= 2) >= 2
+            if has_two_pair:
                 count += self.count_ways_for_partition(partition)
 
         return count
@@ -193,12 +194,9 @@ class DeckAnalyzer:
         count = 0
         for partition in partitions:
             has_triple = any(val >= 3 for val in partition)
-            # Count values >= 2, excluding the one that's already >= 3
-            pair_candidates = [val for val in partition if val >= 2]
-            has_pair_besides_triple = len(pair_candidates) >= 2 or (len(pair_candidates) == 1 and pair_candidates[0] < 3)
+            has_two_pair = sum(1 for val in partition if val >= 2) >= 2
 
-            # Full house needs at least one triple and at least one other pair
-            if has_triple and len([val for val in partition if val >= 2]) >= 2:
+            if has_triple and has_two_pair:
                 count += self.count_ways_for_partition(partition)
 
         return count
@@ -211,10 +209,8 @@ class DeckAnalyzer:
         # Number of possible 5-card straight sequences
         num_straight_types = self.num_ranks - 4
 
-        # Add ace-low straight (A-2-3-4-5) for standard/long decks
-        # This applies when we have standard ranks (13) or more
-        if self.num_ranks >= 13:
-            num_straight_types += 1  # Add the ace-low straight
+        # Add ace-low straight (A-2-3-4-5)
+        num_straight_types += 1
 
         # For each straight type, choose 1 card from each of 5 consecutive ranks
         # Then choose remaining cards from the rest of the deck
@@ -235,22 +231,13 @@ class DeckAnalyzer:
         if self.cards_per_suit < 5 or self.hand_size < 5:
             return 0
 
-        if self.hand_size == 5:
-            # For 5-card hands, all 5 must be the same suit
-            return self.num_suits * self.C(self.cards_per_suit, 5)
-        else:
-            # For larger hands, count hands with at least 5 cards of the same suit
-            # This is more complex - we need inclusion-exclusion
-            # For now, simplified: choose 5 cards from one suit, remaining from anywhere
-            remaining = self.hand_size - 5
-            flush_ways = self.num_suits * self.C(self.cards_per_suit, 5)
+        flush_ways = self.num_suits * self.C(self.cards_per_suit, 5)
 
-            if remaining > 0:
-                remaining_cards = self.total_cards - self.cards_per_suit
-                if remaining_cards >= remaining:
-                    flush_ways *= self.C(remaining_cards, remaining)
+        if self.hand_size > 5:
+            remaining_cards = self.total_cards - 5
+            flush_ways *= self.C(remaining_cards, self.hand_size - 5)
 
-            return flush_ways
+        return flush_ways
 
     def count_four_of_kind(self) -> int:
         """Count hands with at least four of a kind."""
@@ -276,9 +263,8 @@ class DeckAnalyzer:
         # Number of possible straight sequences
         num_straight_types = self.num_ranks - 4
 
-        # Add ace-low straight for standard/long decks
-        if self.num_ranks >= 13:
-            num_straight_types += 1
+        # Add ace-low straight
+        num_straight_types += 1
 
         # For each suit and straight type, choose the 5 specific cards
         # For pinochle with 2 copies: each card has 2 choices
@@ -403,12 +389,12 @@ def main():
     short_deck = DeckAnalyzer(num_ranks=9, num_suits=4, num_copies=1, hand_size=5)
     short_deck.print_analysis()
 
-    # Analyze standard deck with 10 cards (wacky scenario)
+    # Analyze short deck with 7 cards
     print("\n" + "~" * 80)
-    print("STANDARD DECK - 10 CARDS (Wacky Poker)")
+    print("SHORT-DECK HOLDEM - 7 CARDS")
     print("~" * 80)
-    wacky = DeckAnalyzer(num_ranks=13, num_suits=4, num_copies=1, hand_size=10)
-    wacky.print_analysis()
+    short_deck_he = DeckAnalyzer(num_ranks=9, num_suits=4, num_copies=1, hand_size=7)
+    short_deck_he.print_analysis()
 
 
 if __name__ == "__main__":

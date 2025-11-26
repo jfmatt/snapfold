@@ -1,0 +1,44 @@
+id: 4
+name: "Omaha Hi/Lo (Kansas City lowball)"
+
+community_board_count: 1
+phases {
+  player_deal { cards: 4 }
+  betting_round {
+    name: "Pre-flop"
+	order: BETTING_ORDER_FOLLOW_BLINDS
+  }
+  community_deal { name: "Flop", cards: 3 }
+  betting_round {
+  	name: "Flop"
+	order: BETTING_ORDER_LEFT_OF_DEALER
+  }
+  community_deal { name: "Turn", cards: 1 }
+  betting_round {
+  	name: "Turn"
+	order: BETTING_ORDER_LEFT_OF_DEALER
+  }
+  community_deal { name: "River", cards: 1 }
+  betting_round {
+  	name: "River"
+	order: BETTING_ORDER_LEFT_OF_DEALER
+  }
+} 
+
+scorings {
+  name: "Hi"
+  standard_ranking: true
+  hand_cards: { min: 2, max: 2}
+  community_cards: [{min: 3, max: 3}]
+}
+
+scorings {
+  name: "Lo"
+
+  lo: true
+  standard_ranking: true
+  top_card_can_be_low: false
+
+  hand_cards: { min: 2, max: 2 }
+  community_cards: [{min: 3, max: 3}]
+}

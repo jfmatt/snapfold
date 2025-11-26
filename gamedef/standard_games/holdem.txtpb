@@ -1,0 +1,30 @@
+id: 1
+name: "Texas Hold'em"
+
+community_board_count: 1
+phases {
+  player_deal { cards: 2 }
+  betting_round {
+    name: "Pre-flop"
+	order: BETTING_ORDER_FOLLOW_BLINDS
+  }
+  community_deal { name: "Flop", cards: 3 }
+  betting_round {
+  	name: "Flop"
+	order: BETTING_ORDER_LEFT_OF_DEALER
+  }
+  community_deal { name: "Turn", cards: 1 }
+  betting_round {
+  	name: "Turn"
+	order: BETTING_ORDER_LEFT_OF_DEALER
+  }
+  community_deal { name: "River", cards: 1 }
+  betting_round {
+  	name: "River"
+	order: BETTING_ORDER_LEFT_OF_DEALER
+  }
+} 
+
+scorings {
+  standard_ranking: true
+}
