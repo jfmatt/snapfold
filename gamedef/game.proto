@@ -5,7 +5,7 @@ option go_package = "github.com/jfmatt/snapfold/gamedef";
 
 option features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_STRIP;
 
-import "google/protobuf/money.proto";
+import "google/type/money.proto";
 
 // Phases define the sequence of actions that occur in a hand. Some are
 // "0-player" (carried out by the dealer); others require player actions

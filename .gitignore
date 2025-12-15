@@ -2,3 +2,4 @@ bazel-*
 *.swp
 .claude/
 CLAUDE.md
+__pycache__/

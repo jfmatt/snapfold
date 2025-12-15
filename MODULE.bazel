@@ -9,6 +9,10 @@ module(
 bazel_dep(name = "rules_go", version = "0.50.1")
 bazel_dep(name = "gazelle", version = "0.39.1")
 bazel_dep(name = "rules_rust", version = "0.57.1")
+bazel_dep(name = "rules_rust_prost", version = "0.57.1")
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "toolchains_protoc", version = "0.3.7")
+bazel_dep(name = "googleapis", version = "0.0.0-20250114-3e7012c")
 bazel_dep(name = "openssl", version = "3.3.1.bcr.9")
 
 bazel_dep(name = "buildozer", version = "8.2.1", dev_dependency = True)
@@ -49,6 +53,19 @@ crate.from_cargo(
     manifests = ["//:Cargo.toml"],
 )
 
+# Prost dependencies for protobuf support
+crate.spec(package = "prost", version = "0.13.0")
+crate.spec(package = "prost-types", version = "0.13.0", default_features = False)
+
+# Protoc code generators - required for rust_prost_library
+crate.spec(package = "protoc-gen-prost", version = "0.4")
+crate.annotation(crate = "protoc-gen-prost", gen_binaries = ["protoc-gen-prost"])
+crate.spec(package = "protoc-gen-tonic", version = "0.4")
+crate.annotation(crate = "protoc-gen-tonic", gen_binaries = ["protoc-gen-tonic"])
+
+# Tonic for gRPC support (optional)
+crate.spec(package = "tonic", version = "0.12.0", features = ["transport"])
+
 # OpenSSL annotation to fix build issues with openssl-sys
 crate.annotation(
     build_script_data = ["@openssl//:gen_dir"],
@@ -64,3 +81,6 @@ use_repo(crate, "crates")
 
 # Make openssl repository visible to crate_universe
 inject_repo(crate, "openssl")
+
+# Register custom prost toolchain for Rust proto generation
+register_toolchains("//build/prost_toolchain")
