@@ -9,6 +9,10 @@ build --host_cxxopt=-std=c++17
 # Use Bzlmod for dependency management
 common --enable_bzlmod
 
+# Use pre-built protoc binaries (faster builds, requires toolchains_protoc module)
+# Disable with --config=hermetic_protoc for CI builds that require building from source
+build --incompatible_enable_proto_toolchain_resolution
+
 # Enable build output for better debugging
 build --verbose_failures
 build --worker_verbose
@@ -27,3 +31,8 @@ build:go_host --@rules_go//go/toolchain:sdk_version=host
 
 # Use downloaded Go: bazel build --config=hermetic //...
 build:hermetic --@rules_go//go/toolchain:sdk_version=1.24.2
+
+# Hermetic protoc: build protoc from source for CI hermeticity
+# Use in CI: bazel build --config=hermetic_protoc //...
+build:hermetic_protoc --@toolchains_protoc//protoc:skip_toolchain=true
+build:hermetic_protoc --noincompatible_enable_proto_toolchain_resolution

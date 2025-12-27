@@ -29,11 +29,11 @@ go_proto_library(
 rust_proto3_library(
     name = "gamedef_rust_proto",
     srcs = ["game.proto"],
+    visibility = ["//visibility:public"],
     deps = [
         "@googleapis//google/type:money_proto",
         # Note: @protobuf//:go_features_proto is Go-specific and removed during transformation
     ],
-    visibility = ["//visibility:public"],
 )
 
 go_library(
