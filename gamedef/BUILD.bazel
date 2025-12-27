@@ -18,7 +18,10 @@ go_proto_library(
     importpath = "github.com/jfmatt/snapfold/gamedef",
     proto = ":gamedef_proto",
     visibility = ["//visibility:public"],
-    deps = ["@googleapis//google/type:money_go_proto"],
+    deps = [
+        "@googleapis//google/type:money_go_proto",
+        "@org_golang_google_protobuf//types/gofeaturespb",
+    ],
 )
 
 rust_prost_library(

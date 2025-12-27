@@ -37,7 +37,12 @@ go_sdk.download(
 # Go dependencies from go.mod
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
-use_repo(go_deps, "com_github_jfmatt_gotest", "com_github_spf13_cobra")
+use_repo(
+    go_deps,
+    "com_github_jfmatt_gotest",
+    "com_github_spf13_cobra",
+    "org_golang_google_protobuf",  # Needed for go_features.proto (edition 2024) support
+)
 
 # Rust toolchain configuration
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
@@ -56,17 +61,40 @@ crate.from_cargo(
 )
 
 # Prost dependencies for protobuf support
-crate.spec(package = "prost", version = "0.13.0")
-crate.spec(package = "prost-types", version = "0.13.0", default_features = False)
+crate.spec(
+    package = "prost",
+    version = "0.13.0",
+)
+crate.spec(
+    default_features = False,
+    package = "prost-types",
+    version = "0.13.0",
+)
 
 # Protoc code generators - required for rust_prost_library
-crate.spec(package = "protoc-gen-prost", version = "0.4")
-crate.annotation(crate = "protoc-gen-prost", gen_binaries = ["protoc-gen-prost"])
-crate.spec(package = "protoc-gen-tonic", version = "0.4")
-crate.annotation(crate = "protoc-gen-tonic", gen_binaries = ["protoc-gen-tonic"])
+crate.spec(
+    package = "protoc-gen-prost",
+    version = "0.4",
+)
+crate.annotation(
+    crate = "protoc-gen-prost",
+    gen_binaries = ["protoc-gen-prost"],
+)
+crate.spec(
+    package = "protoc-gen-tonic",
+    version = "0.4",
+)
+crate.annotation(
+    crate = "protoc-gen-tonic",
+    gen_binaries = ["protoc-gen-tonic"],
+)
 
 # Tonic for gRPC support (optional)
-crate.spec(package = "tonic", version = "0.12.0", features = ["transport"])
+crate.spec(
+    features = ["transport"],
+    package = "tonic",
+    version = "0.12.0",
+)
 
 # OpenSSL annotation to fix build issues with openssl-sys
 crate.annotation(
