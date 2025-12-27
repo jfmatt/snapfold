@@ -7,7 +7,10 @@ proto_library(
     name = "gamedef_proto",
     srcs = ["game.proto"],
     visibility = ["//visibility:public"],
-    deps = ["@googleapis//google/type:money_proto"],
+    deps = [
+        "@googleapis//google/type:money_proto",
+        "@protobuf//:go_features_proto",
+    ],
 )
 
 go_proto_library(
@@ -18,15 +21,15 @@ go_proto_library(
     deps = ["@googleapis//google/type:money_go_proto"],
 )
 
+rust_prost_library(
+    name = "gamedef_rust_proto",
+    proto = ":gamedef_proto",
+    visibility = ["//visibility:public"],
+)
+
 go_library(
     name = "gamedef",
     embed = [":gamedef_go_proto"],
     importpath = "github.com/jfmatt/snapfold/gamedef",
-    visibility = ["//visibility:public"],
-)
-
-rust_prost_library(
-    name = "gamedef_rust_proto",
-    proto = ":gamedef_proto",
     visibility = ["//visibility:public"],
 )

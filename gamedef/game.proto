@@ -3,6 +3,7 @@ edition = "2024";
 package snapfold.gamedef;
 option go_package = "github.com/jfmatt/snapfold/gamedef";
 
+import "google/protobuf/go_features.proto";
 option features.(pb.go).strip_enum_prefix = STRIP_ENUM_PREFIX_STRIP;
 
 import "google/type/money.proto";
@@ -121,19 +122,19 @@ enum HandRanking {
   RANKING_UNKNOWN = 0;
 
   // Normal Hold'em poker hand order - same as the enum order for hands, above.
-  STANDARD = 1;
+  RANKING_STANDARD = 1;
 
   // Use A-5 ranking, typical for the Omaha low hand.
   // Corresponds to listing all hands in the same order
   // as the enum above, but omitting FLUSH, STRAIGHT,
   // and STRAIGHT_FLUSH.
-  ACE_FIVE = 2;
+  RANKING_ACE_FIVE = 2;
 
   // Short deck ranking: SF, 4oak, flush, FH, 3oak, straight, 2p
-  SHORT_DECK = 3;
+  RANKING_SHORT_DECK = 3;
 
   // Alternate short-deck ranking: SF, 4oak, flush, FH, straight, 3oak, 2p
-  SHORT_DECK_HIGH_STRAIGHT = 4;
+  RANKING_SHORT_DECK_HIGH_STRAIGHT = 4;
 }
 
 
@@ -202,7 +203,7 @@ message Scoring {
   // Only relevant if lo is true.
   //
   // Defaults to true (A-5/A-6 rules).
-  bool top_card_can_be_low = 8;
+  bool top_card_can_be_low = 9;
 
   // Represents an inclusive range of number of cards. If min == max == -1, then
   // there is no restriction on the number of cards.
@@ -219,7 +220,7 @@ message Scoring {
   // Examples:
   //   - Hold'em: {min: -1, max: -1}, or {min: 0, max: 2}, or no value
   //   - Omaha: {min: 2, max: 2}
-  Range hand_cards = 8;
+  Range hand_cards = 10;
 
   // Number of cards that players must use from each community board. Each
   // element corresponds to a single community board, if there are multiple.
@@ -229,17 +230,17 @@ message Scoring {
   //   - Double-board Hold'em:
   //      - Score 1: [{min: -1, max: -1}, {min: 0, max: 0}]
   //      - Score 2: [{min: 0, max: 0}, {min: -1, max: -1}]
-  repeated Range community_cards = 9;
+  repeated Range community_cards = 11;
 }
 
 enum StandardDeck {
   DECK_UNKNOWN = 0;
   
   // The typical 52-card deck, 13x4
-  POKER = 1;
+  DECK_POKER = 1;
 
   // 6+ poker (9 per suit, 36 total)
-  SHORT_DECK = 2;
+  DECK_SHORT_DECK = 2;
 }
 
 message Deck {
@@ -308,9 +309,9 @@ message Blinds {
   //
   // If this is a bomb pot, then the blinds will not be posted, but the largest
   // blind amount will still be used to determine minimum bet sizes.
-  repeated google.protobuf.Money blind_levels = 1;
+  repeated google.type.Money blind_levels = 1;
 
-  enum blind_order {
+  enum BlindOrder {
     BLIND_ORDER_UNKNOWN = 0;
 
     // First blind is paid by the left of the dealer, then left of
@@ -330,14 +331,14 @@ message Blinds {
   }
 
   // Ante amount posted by each player at the start of each hand.
-  google.protobuf.Money ante = 2;
+  google.type.Money ante = 2;
 
   // If set, this hand will work as a bomb pot. No blinds, antes, or straddles
   // will be posted. Instead, when the first betting phase is reached, each
   // player will post this amount, and then the phase will immediately end. In
   // Hold'em, this means that the pot starts with each player contributing this
   // amount, and betting begins after the flop.
-  google.protobuf.Money bomb_pot = 3;
+  google.type.Money bomb_pot = 3;
 
   // Each straddle is an additional blind posted optionally. The player who
   // posts the straddle (or the last straddle, if multiple are allowed) acts
@@ -369,10 +370,10 @@ message Blinds {
 
 message Buyin {
   // Minimum buy-in amount for the table.
-  google.protobuf.Money min = 1;
+  google.type.Money min = 1;
 
   // Maximum buy-in amount for the table.
-  google.protobuf.Money max = 2;
+  google.type.Money max = 2;
 
   // If true, players can buy in to match the largest stack at the table, even
   // if it exceeds 'max'.
@@ -402,6 +403,6 @@ message TableConfig {
     // size of the pot.
     POT_LIMIT = 3;
   }
-  BettingStructure structure = 5;
+  BettingStructure bets = 5;
   Buyin buyin = 6;
 }

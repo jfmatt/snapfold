@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/jfmatt/snapfold/gocli/cmd/cli",
     visibility = ["//visibility:private"],
     deps = [
+        "//gamedef",
         "//lib/greeting",
         "@com_github_spf13_cobra//:cobra",
     ],

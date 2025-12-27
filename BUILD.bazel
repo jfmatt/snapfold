@@ -2,4 +2,12 @@ load("@gazelle//:def.bzl", "gazelle")
 
 # Go configuration
 # gazelle:prefix github.com/jfmatt/snapfold
+
+# Proto configuration
+# gazelle:proto default
+
+# Map googleapis protos (not in Gazelle's built-in known_imports)
+# gazelle:resolve proto google/type/money.proto @googleapis//google/type:money_proto
+# gazelle:resolve go google/type/money.proto @googleapis//google/type:money_go_proto
+
 gazelle(name = "gazelle")
