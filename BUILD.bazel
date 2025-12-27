@@ -6,8 +6,9 @@ load("@gazelle//:def.bzl", "gazelle")
 # Proto configuration
 # gazelle:proto default
 
-# Map googleapis protos (not in Gazelle's built-in known_imports)
-# gazelle:resolve proto google/type/money.proto @googleapis//google/type:money_proto
-# gazelle:resolve go google/type/money.proto @googleapis//google/type:money_go_proto
+# Map googleapis protos
+# Format: gazelle:resolve <source-lang> <target-lang> <import> <label>
+# gazelle:resolve proto proto google/type/money.proto @googleapis//google/type:money_proto
+# gazelle:resolve proto go google/type/money.proto @googleapis//google/type:money_go_proto
 
 gazelle(name = "gazelle")
