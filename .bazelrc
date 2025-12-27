@@ -2,6 +2,10 @@
 build --enable_platform_specific_config
 build --incompatible_enable_cc_toolchain_resolution
 
+# C++ standard - required for protobuf 33.1+ and abseil
+build --cxxopt=-std=c++17
+build --host_cxxopt=-std=c++17
+
 # Use Bzlmod for dependency management
 common --enable_bzlmod
 

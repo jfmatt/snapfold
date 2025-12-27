@@ -136,21 +136,39 @@ class DeckAnalyzer:
         """Count total possible hands."""
         return self.C(self.total_cards, self.hand_size)
 
-    def count_pairs(self) -> int:
-        """Count hands with at least one pair."""
+    def count_pairs(self, exclusive: bool = False) -> int:
+        """Count hands with at least one pair.
+
+        Args:
+            exclusive: If True, only count pairs that are not also 2pair, 3oak, 4oak, 5oak, or full house.
+        """
         # Generate all partitions of hand_size
         partitions = self.generate_partitions(self.hand_size)
 
         # Sum ways for partitions with at least one value >= 2
         count = 0
         for partition in partitions:
-            if any(val >= 2 for val in partition):
-                count += self.count_ways_for_partition(partition)
+            has_pair = any(val >= 2 for val in partition)
+
+            if exclusive:
+                # Exclude hands that are also better hand types
+                has_two_pair = sum(1 for val in partition if val >= 2) >= 2
+                has_3oak = any(val >= 3 for val in partition)
+
+                if has_pair and not has_two_pair and not has_3oak:
+                    count += self.count_ways_for_partition(partition)
+            else:
+                if has_pair:
+                    count += self.count_ways_for_partition(partition)
 
         return count
 
-    def count_two_pair(self) -> int:
-        """Count hands with at least two pairs (of different ranks)."""
+    def count_two_pair(self, exclusive: bool = False) -> int:
+        """Count hands with at least two pairs (of different ranks).
+
+        Args:
+            exclusive: If True, only count two pair that is not also a full house.
+        """
         if self.hand_size < 4:
             return 0  # Need at least 4 cards for two pairs
 
@@ -161,13 +179,26 @@ class DeckAnalyzer:
         count = 0
         for partition in partitions:
             has_two_pair = sum(1 for val in partition if val >= 2) >= 2
-            if has_two_pair:
-                count += self.count_ways_for_partition(partition)
+
+            if exclusive:
+                # Exclude hands that are also full house
+                has_3oak = any(val >= 3 for val in partition)
+                has_full_house = has_3oak and has_two_pair
+
+                if has_two_pair and not has_full_house:
+                    count += self.count_ways_for_partition(partition)
+            else:
+                if has_two_pair:
+                    count += self.count_ways_for_partition(partition)
 
         return count
 
-    def count_three_of_kind(self) -> int:
-        """Count hands with at least three of a kind."""
+    def count_three_of_kind(self, exclusive: bool = False) -> int:
+        """Count hands with at least three of a kind.
+
+        Args:
+            exclusive: If True, only count 3oak that is not also 4oak, 5oak, or full house.
+        """
         if self.hand_size < 3:
             return 0  # Need at least 3 cards for three of a kind
 
@@ -177,13 +208,28 @@ class DeckAnalyzer:
         # Sum ways for partitions with at least one value >= 3
         count = 0
         for partition in partitions:
-            if any(val >= 3 for val in partition):
-                count += self.count_ways_for_partition(partition)
+            has_3oak = any(val >= 3 for val in partition)
+
+            if exclusive:
+                # Exclude hands that are also 4oak, 5oak, or full house
+                has_4oak = any(val >= 4 for val in partition)
+                has_two_pair = sum(1 for val in partition if val >= 2) >= 2
+                has_full_house = has_3oak and has_two_pair
+
+                if has_3oak and not has_4oak and not has_full_house:
+                    count += self.count_ways_for_partition(partition)
+            else:
+                if has_3oak:
+                    count += self.count_ways_for_partition(partition)
 
         return count
 
-    def count_full_house(self) -> int:
-        """Count hands with a full house (3 of one rank, 2 of another)."""
+    def count_full_house(self, exclusive: bool = False) -> int:
+        """Count hands with a full house (3 of one rank, 2 of another).
+
+        Args:
+            exclusive: No effect (no hand definitionally contains full house).
+        """
         if self.num_ranks < 2 or self.hand_size < 5:
             return 0  # Need at least 2 ranks and 5 cards for a full house
 
@@ -199,12 +245,17 @@ class DeckAnalyzer:
             if has_triple and has_two_pair:
                 count += self.count_ways_for_partition(partition)
 
+        # Exclusive = inclusive for full house (no better hands)
         return count
 
-    def count_straights(self) -> int:
+    def count_straights(self, exclusive: bool = False) -> int:
         """Count hands that contain a straight.
 
         For hands larger than 5 cards, we need to avoid double-counting different straights.
+        Uses inclusion-exclusion to count hands with at least one card from each required rank.
+
+        Args:
+            exclusive: If True, only count straights that are not also straight flushes.
         """
         if self.num_ranks < 5 or self.hand_size < 5:
             return 0
@@ -218,39 +269,75 @@ class DeckAnalyzer:
         if remaining_cards == 0:
             # Simple case: exactly 5 cards
             # Include ace-low
-            return num_straight_types * (self.cards_per_rank ** 5)
+            total = num_straight_types * (self.cards_per_rank ** 5)
 
-        # For larger hands, we need to be careful about double-counting
+            if exclusive:
+                # Subtract straight flushes
+                total -= self.count_straight_flushes()
 
-        # Handle non-ace-high straights (they can be extended upward)
-        for straight_idx in range(num_straight_types - 1):  # Exclude ace-high
-            # Choose 5 cards for the straight (one from each rank)
-            ways = self.cards_per_rank ** 5
+            return total
 
-            # These straights can be extended upward by one rank
-            # Exclude cards that would create a different straight
-            excluded_cards = self.cards_per_rank  # The rank that would extend it upward
+        # For larger hands, use inclusion-exclusion
+        # Strategy: assign each hand to its HIGHEST straight by excluding next rank
 
-            # Choose remaining cards
-            available_cards = self.total_cards - excluded_cards
-            if available_cards >= remaining_cards:
-                ways *= self.C(available_cards, remaining_cards)
-                total += ways
+        # Handle non-ace-high straights (can be extended upward)
+        for straight_idx in range(num_straight_types - 1):
+            # Count hands with at least 1 card from each of the 5 straight ranks
+            # and NO cards from the next rank up (to avoid double-counting)
 
-        # Handle ace-high straight (cannot be extended upward)
-        ways = self.cards_per_rank ** 5
-        # No cards to exclude (can't extend beyond ace)
-        available_cards = self.total_cards
-        if available_cards >= remaining_cards:
-            ways *= self.C(available_cards, remaining_cards)
-            total += ways
+            # Use inclusion-exclusion:
+            # Total hands from (52 - 4) cards = C(48, 7)
+            # Minus hands missing at least one required rank
+
+            ranks_in_straight = 5
+            excluded_rank = 1  # The next rank up
+            available_ranks = self.num_ranks - ranks_in_straight - excluded_rank
+            cards_per_rank = self.cards_per_rank
+
+            # Count hands with cards only from the allowed ranks
+            # (the 5 straight ranks + other ranks, but NOT the next rank up)
+            total_allowed_cards = (ranks_in_straight + available_ranks) * cards_per_rank
+
+            # All possible hands from allowed cards
+            all_from_allowed = self.C(total_allowed_cards, self.hand_size)
+
+            # Subtract hands missing at least one required rank using inclusion-exclusion
+            # Sum over k = 1 to 5: (-1)^k * C(5, k) * C(total_allowed_cards - k*cards_per_rank, hand_size)
+            count_with_all_ranks = all_from_allowed
+            for k in range(1, ranks_in_straight + 1):
+                cards_without_k_ranks = total_allowed_cards - k * cards_per_rank
+                if cards_without_k_ranks >= self.hand_size:
+                    count_with_all_ranks += ((-1) ** k) * self.C(ranks_in_straight, k) * self.C(cards_without_k_ranks, self.hand_size)
+
+            total += count_with_all_ranks
+
+        # Handle ace-high straight (cannot be extended)
+        ranks_in_straight = 5
+        available_ranks = self.num_ranks - ranks_in_straight
+        total_allowed_cards = self.total_cards  # Can use any rank
+
+        all_from_allowed = self.C(total_allowed_cards, self.hand_size)
+        count_with_all_ranks = all_from_allowed
+        for k in range(1, ranks_in_straight + 1):
+            cards_without_k_ranks = total_allowed_cards - k * self.cards_per_rank
+            if cards_without_k_ranks >= self.hand_size:
+                count_with_all_ranks += ((-1) ** k) * self.C(ranks_in_straight, k) * self.C(cards_without_k_ranks, self.hand_size)
+
+        total += count_with_all_ranks
+
+        if exclusive:
+            # Subtract straight flushes
+            total -= self.count_straight_flushes()
 
         return total
 
-    def count_flushes(self) -> int:
+    def count_flushes(self, exclusive: bool = False) -> int:
         """Count hands that contain a flush (at least 5 cards of the same suit).
 
         For larger hands, we count all possible ways to get at least 5 of the same suit.
+
+        Args:
+            exclusive: If True, only count flushes that are not also straight flushes.
         """
         if self.cards_per_suit < 5 or self.hand_size < 5:
             return 0
@@ -274,10 +361,18 @@ class DeckAnalyzer:
 
                 total += ways
 
+        if exclusive:
+            # Subtract straight flushes
+            total -= self.count_straight_flushes()
+
         return total
 
-    def count_four_of_kind(self) -> int:
-        """Count hands with at least four of a kind."""
+    def count_four_of_kind(self, exclusive: bool = False) -> int:
+        """Count hands with at least four of a kind.
+
+        Args:
+            exclusive: If True, only count 4oak that is not also 5oak.
+        """
         if self.hand_size < 4 or self.cards_per_rank < 4:
             return 0  # Need at least 4 cards in hand and 4 cards per rank
 
@@ -287,13 +382,25 @@ class DeckAnalyzer:
         # Sum ways for partitions with at least one value >= 4
         count = 0
         for partition in partitions:
-            if any(val >= 4 for val in partition):
-                count += self.count_ways_for_partition(partition)
+            has_4oak = any(val >= 4 for val in partition)
+
+            if exclusive:
+                # Exclude hands that are also 5oak
+                has_5oak = any(val >= 5 for val in partition)
+
+                if has_4oak and not has_5oak:
+                    count += self.count_ways_for_partition(partition)
+            else:
+                if has_4oak:
+                    count += self.count_ways_for_partition(partition)
 
         return count
 
-    def count_straight_flushes(self) -> int:
+    def count_straight_flushes(self, exclusive: bool = False) -> int:
         """Count hands that are both straight and flush.
+
+        Args:
+            exclusive: No effect (no hand definitionally contains straight flush).
 
         For hands larger than 5 cards, avoid double-counting different straight flushes.
         """
@@ -303,51 +410,61 @@ class DeckAnalyzer:
         total = 0
         remaining_cards = self.hand_size - 5
 
-        # Number of possible straight types
-        num_straight_types = self.num_ranks - 4  # Regular straights (not including ace-low yet)
+        # Number of possible straight types (including ace-low)
+        num_straight_types = self.num_ranks - 3  # assumes ace can be low
+
+        if remaining_cards == 0:
+            # Simple case: exactly 5 cards
+            # Each suit can have num_straight_types different straights (including ace-low)
+            return self.num_suits * num_straight_types * (self.num_copies ** 5)
 
         # For each suit
-        for suit in range(self.num_suits):
-            # Handle non-ace-high straights (they can all be extended upward)
-            for straight_idx in range(num_straight_types - 1):  # Exclude the highest (ace-high)
-                # We have exactly one way to pick the 5 cards for this SF
-                ways = self.num_copies ** 5  # For decks with multiple copies per card
+        # Handle ace-low straight (A-2-3-4-5 or A-6-7-8-9) if it exists
+        # Ace-low can be extended upward
+        ways = self.num_copies ** 5
+        # Ace-low can be extended by the next rank up (rank after the 5th lowest)
+        excluded_cards = self.num_copies
+        available_cards = self.total_cards - 5 * self.num_copies - excluded_cards
+        if available_cards >= remaining_cards:
+            ways *= self.C(available_cards, remaining_cards)
+            total += ways
 
-                if remaining_cards > 0:
-                    # These straights can be extended upward by one rank
-                    # So exclude that one card from the same suit
-                    excluded_cards = self.num_copies  # The card that would extend it upward
+        # Handle middle straights (can be extended upward)
+        # These are all straights except ace-low and ace-high
+        # For 13 ranks: 2-3-4-5-6, 3-4-5-6-7, ..., 9-10-J-Q-K
+        # That's (num_straight_types - 2) straights
+        num_middle_straights = num_straight_types - 2
+        for straight_idx in range(num_middle_straights):
+            # We have exactly one way to pick the 5 cards for this SF
+            ways = self.num_copies ** 5  # For decks with multiple copies per card
 
-                    # Choose remaining cards from available cards
-                    available_cards = self.total_cards - 5 * self.num_copies - excluded_cards
-                    if available_cards >= remaining_cards:
-                        ways *= self.C(available_cards, remaining_cards)
-                        total += ways
+            # These straights can be extended upward by one rank
+            # So exclude that one card from the same suit
+            excluded_cards = self.num_copies  # The card that would extend it upward
 
-            # Handle ace-high straight (10-J-Q-K-A or similar) - cannot be extended upward
-            ways = self.num_copies ** 5
-            if remaining_cards > 0:
-                # Ace-high cannot be extended (no card above ace)
-                available_cards = self.total_cards - 5 * self.num_copies
-                if available_cards >= remaining_cards:
-                    ways *= self.C(available_cards, remaining_cards)
-                    total += ways
+            # Choose remaining cards from available cards
+            available_cards = self.total_cards - 5 * self.num_copies - excluded_cards
+            if available_cards >= remaining_cards:
+                ways *= self.C(available_cards, remaining_cards)
+                total += ways
 
-            # Handle ace-low straight (A-2-3-4-5 or A-6-7-8-9) if it exists
-            # Ace-low can be extended upward
-            ways = self.num_copies ** 5
-            if remaining_cards > 0:
-                # Ace-low can be extended by the next rank up
-                excluded_cards = self.num_copies
-                available_cards = self.total_cards - 5 * self.num_copies - excluded_cards
-                if available_cards >= remaining_cards:
-                    ways *= self.C(available_cards, remaining_cards)
-                    total += ways
+        # Handle ace-high straight (10-J-Q-K-A or similar) - cannot be extended upward
+        ways = self.num_copies ** 5
+        # Ace-high cannot be extended (no card above ace)
+        available_cards = self.total_cards - 5 * self.num_copies
+        if available_cards >= remaining_cards:
+            ways *= self.C(available_cards, remaining_cards)
+            total += ways
 
-        return total
+        # Exclusive = inclusive for straight flush (no better hands)
+        return total * self.num_suits
 
-    def count_five_of_kind(self) -> int:
-        """Count hands with at least five of a kind."""
+    def count_five_of_kind(self, exclusive: bool = False) -> int:
+        """Count hands with at least five of a kind.
+
+        Args:
+            exclusive: No effect (no hand definitionally contains 5oak).
+        """
         if self.cards_per_rank < 5 or self.hand_size < 5:
             return 0
 
@@ -360,6 +477,7 @@ class DeckAnalyzer:
             if any(val >= 5 for val in partition):
                 count += self.count_ways_for_partition(partition)
 
+        # Exclusive = inclusive for 5oak (no better hands)
         return count
 
     def analyze_hands(self) -> Dict[str, Tuple[int, float]]:
@@ -425,43 +543,6 @@ class DeckAnalyzer:
             print(f"{i}. {hand_type:<25} {prob:>7.4%}  ({ratio})")
 
 
-def verify_straight_flush_calculation():
-    """Verify the straight flush calculation against blog post values."""
-    import math
-
-    print("\n" + "=" * 80)
-    print("VERIFICATION: Short-deck 7-card Straight Flush")
-    print("=" * 80)
-
-    # Create analyzer
-    analyzer = DeckAnalyzer(num_ranks=9, num_suits=4, num_copies=1, hand_size=7)
-
-    # Calculate expected values from blog post
-    # Royal flush: 4 * C(31, 2)
-    royal_flush = 4 * analyzer.C(31, 2)
-    print(f"Blog post - Royal flush:     {royal_flush:,}")
-
-    # Non-royal SF: 4 * 5 * C(30, 2)
-    non_royal_sf = 4 * 5 * analyzer.C(30, 2)
-    print(f"Blog post - Non-royal SF:    {non_royal_sf:,}")
-
-    total_expected = royal_flush + non_royal_sf
-    print(f"Blog post - Total:           {total_expected:,}")
-
-    # Our calculation
-    our_result = analyzer.count_straight_flushes()
-    print(f"\nOur calculation:             {our_result:,}")
-
-    # Difference
-    diff = our_result - total_expected
-    print(f"Difference:                  {diff:,}")
-
-    if diff == 0:
-        print("✓ MATCH! Calculation is correct.")
-    else:
-        print(f"✗ Mismatch by {abs(diff)} hands")
-
-
 def main():
     """Main function to demonstrate the analyzer."""
     # Analyze standard deck with 5 cards (traditional poker)
@@ -485,6 +566,28 @@ def main():
     pinochle = DeckAnalyzer(num_ranks=6, num_suits=4, num_copies=2, hand_size=5)
     pinochle.print_analysis()
 
+    # Analyze pinochle deck with 5 cards
+    print("\n" + "~" * 80)
+    print("PINOCHLE HOLDEM - 7 CARDS")
+    print("~" * 80)
+    pinochle_he = DeckAnalyzer(num_ranks=6, num_suits=4, num_copies=2, hand_size=7)
+    pinochle_he.print_analysis()
+
+    # Analyze wide deck with many suits
+    print("\n" + "~" * 80)
+    print("WIDE DECK - 5 CARDS")
+    print("~" * 80)
+    wide = DeckAnalyzer(num_ranks=13, num_suits=12, num_copies=1, hand_size=5)
+    wide.print_analysis()
+
+    # Analyze wide deck with 7 cards
+    print("\n" + "~" * 80)
+    print("WIDE DECK HOLDEM - 7 CARDS")
+    print("~" * 80)
+    wide_he = DeckAnalyzer(num_ranks=13, num_suits=12, num_copies=1, hand_size=7)
+    wide_he.print_analysis()
+
+
     # Analyze short deck with 5 cards
     print("\n" + "~" * 80)
     print("SHORT-DECK - 5 CARDS")
@@ -498,9 +601,6 @@ def main():
     print("~" * 80)
     short_deck_he = DeckAnalyzer(num_ranks=9, num_suits=4, num_copies=1, hand_size=7)
     short_deck_he.print_analysis()
-
-    # Verify the straight flush calculation
-    verify_straight_flush_calculation()
 
 
 if __name__ == "__main__":

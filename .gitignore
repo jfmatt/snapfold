@@ -1,5 +1,8 @@
 bazel-*
 *.swp
+
 .claude/
 CLAUDE.md
+
+.venv/
 __pycache__/

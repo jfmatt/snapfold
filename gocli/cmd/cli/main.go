@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/jfmatt/snapfold/lib/greeting"
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
@@ -19,6 +19,7 @@ var rootCmd = &cobra.Command{
 		fmt.Println(greeting.GetGreeting(""))
 		if len(args) > 0 {
 			fmt.Printf("Arguments: %v\n", args)
+			fmt.Printf("args: %v", args)
 		}
 	},
 }

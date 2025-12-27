@@ -46,6 +46,10 @@ message Phase {
   message BettingRound {
     string name = 1;
 
+    // Minimum initial bet, as a multiplier on the largest blind from the first
+    // betting round.
+    int32 min_bet = 2;
+
     enum BettingOrder {
       BETTING_ORDER_UNKNOWN = 0;
 
@@ -77,7 +81,6 @@ message Phase {
     // Max number of cards that can be exchanged by each player during this
     // draw phase.
     int32 max_exchange = 1;
-
 
     // If set, players may not exchange face-up cards.
     bool lock_faceup = 2;
@@ -114,13 +117,40 @@ enum HandType {
   FLUSH_FIVE = 12;
 }
 
+enum HandRanking {
+  RANKING_UNKNOWN = 0;
+
+  // Normal Hold'em poker hand order - same as the enum order for hands, above.
+  STANDARD = 1;
+
+  // Use A-5 ranking, typical for the Omaha low hand.
+  // Corresponds to listing all hands in the same order
+  // as the enum above, but omitting FLUSH, STRAIGHT,
+  // and STRAIGHT_FLUSH.
+  ACE_FIVE = 2;
+
+  // Short deck ranking: SF, 4oak, flush, FH, 3oak, straight, 2p
+  SHORT_DECK = 3;
+
+  // Alternate short-deck ranking: SF, 4oak, flush, FH, straight, 3oak, 2p
+  SHORT_DECK_HIGH_STRAIGHT = 4;
+}
+
+
 // Defines how a pot is awarded at the end of a hand.
 //
 // Players will always use exactly five cards to form their best hand, but the
 // number of cards that must come from their hand (as opposed to the community
-// board) may vary depending on the game variant (e.g. for Omaga), and the 
+// board) may vary depending on the game variant (e.g. for Omaga), and the
 // ranking of hand types may also vary (e.g. for short-deck).
 message Scoring {
+  // Wrapper message for custom hand ordering
+  message CustomHandOrder {
+    // The order of hand types, from strongest to weakest, for this scoring
+    // rule.
+    repeated HandType hand_types = 1;
+  }
+
   // Used to disambiguate if there are multiple scoring
   // rules (e.g. for Omaha Hi/Lo). Not relevant in more
   // typical games with a single winner.
@@ -130,17 +160,10 @@ message Scoring {
     // Use the standard poker hand rankings. Corresponds
     // to listing all hands in the same order as the enum
     // above.
-    bool standard_ranking = 2;
+    HandRanking standard_ranking = 2;
 
-    // Use A-5 ranking, typical for the Omaha low hand.
-    // Corresponds to listing all hands in the same order
-    // as the enum above, but skipping FLUSH, STRAIGHT,
-    // and STRAIGHT_FLUSH.
-    bool ace_five = 3;
-
-    // The order of hand types from weakest to strongest
-    // for this scoring rule.
-    repeated HandType hand_order = 4;
+    // Custom hand order from strongest to weakest.
+    CustomHandOrder custom_hand_order = 4;
   }
 
   // Whether the top card plus bottom 4 cards is a valid
@@ -209,6 +232,16 @@ message Scoring {
   repeated Range community_cards = 9;
 }
 
+enum StandardDeck {
+  DECK_UNKNOWN = 0;
+  
+  // The typical 52-card deck, 13x4
+  POKER = 1;
+
+  // 6+ poker (9 per suit, 36 total)
+  SHORT_DECK = 2;
+}
+
 message Deck {
   // The set of suits in the deck. Each suit should be a single "character",
   // although the definition of such is a bit squirrelly with Unicode. Order
@@ -250,12 +283,15 @@ message GameStructure {
   string id = 1;
   string name = 2;
 
-  // Deck used in the game. If not specified, a standard 52-card deck is used.
-  Deck deck = 3;
+  // Deck used in the game.
+  oneof deck {
+    StandardDeck standard_deck = 3;
+    Deck custom_deck = 4;
+  }
 
   // Defines the dealing and betting phases of the game.
-  repeated Phase phases = 4;
-  int32 community_board_count = 5;
+  repeated Phase phases = 5;
+  int32 community_board_count = 6;
 
   // Defines how a winner is determined if multiple players remain at showdown.
   //
@@ -263,7 +299,7 @@ message GameStructure {
   // independently for each one, and the pot is split among the winners of each
   // score. Most standard casino games have only one scoring rule; multiple
   // rules are used to represent Omaha Hi-Lo and double-board games.
-  repeated Scoring scorings = 6;
+  repeated Scoring scorings = 7;
 }
 
 message Blinds {
