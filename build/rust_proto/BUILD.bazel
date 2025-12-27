@@ -1,0 +1,2 @@
+# Rust protobuf edition transformation rules
+exports_files(["defs.bzl"])
