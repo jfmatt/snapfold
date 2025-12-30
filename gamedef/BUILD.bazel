@@ -24,21 +24,18 @@ go_proto_library(
     ],
 )
 
-# Rust proto library with edition → proto3 transformation
-# (Workaround for https://github.com/tokio-rs/prost/issues/1031)
+go_library(
+    name = "gamedef",
+    embed = [":gamedef_go_proto"],
+    importpath = "github.com/jfmatt/snapfold/gamedef",
+    visibility = ["//visibility:public"],
+)
+
 rust_proto3_library(
     name = "gamedef_rust_proto",
     srcs = ["game.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@googleapis//google/type:money_proto",
-        # Note: @protobuf//:go_features_proto is Go-specific and removed during transformation
     ],
-)
-
-go_library(
-    name = "gamedef",
-    embed = [":gamedef_go_proto"],
-    importpath = "github.com/jfmatt/snapfold/gamedef",
-    visibility = ["//visibility:public"],
 )

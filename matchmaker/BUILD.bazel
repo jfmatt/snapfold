@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "matchmaker_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/jfmatt/snapfold/matchmaker",
+    visibility = ["//visibility:private"],
+    deps = [
+        "@com_github_jfmatt_flagr//:flagr",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)
+
+go_binary(
+    name = "matchmaker",
+    embed = [":matchmaker_lib"],
+    visibility = ["//visibility:public"],
+)
